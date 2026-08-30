@@ -1504,19 +1504,24 @@ input[type="number"] {
 
 <section class="visual-card">
   <div class="measure-meta">
-    <span>MESURE <strong id="measureNumber">1</strong></span>
+    <span>MESURE <strong id="measureNumber">1</strong><div id="beatCounter">1 / 4</div></span>
+	
+	<span>
+			<div id="beatIndicators" class="beat-indicators"></div>
+			<div class="pulse" id="pulse"></div>
+		</span>
     <div class="measure-right">
-      <span id="beatCounter">1 / 4</span>
-      <button id="startStop" class="start-button-circle">
+		
+		<button id="startStop" class="start-button-circle">
         <span class="button-icon">▶</span>
         <span id="startText">DÉMARRER</span>
       </button>
+      
+      
     </div>
   </div>
   
-  <div id="beatIndicators" class="beat-indicators"></div>
-  <div class="pulse" id="pulse"></div>
-  <p class="shortcut-circle">ESPACE</p>
+
 </section>
 
   <section class="ramp-card">
