@@ -777,6 +777,18 @@ h1 span{color:var(--accent)}
   margin:1px 0 0;
 }
 
+/* ===== CHAMP DÉSACTIVÉ ===== */
+.field.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.field.disabled input {
+  cursor: not-allowed;
+}
+.field.disabled label {
+  color: var(--muted);
+}
+
 /* ===== SIMULATEUR ===== */
 .simulator-container{
   grid-column:1/-1;
@@ -1563,6 +1575,13 @@ input[type="number"] {
         <span>MESURES</span>
       </div>
       
+      <!-- NOUVEAU CHAMP PAS -->
+      <div class="field" id="stepField">
+        <label for="rampStep">PAS</label>
+        <input id="rampStep" type="number" min="1" max="50" value="5">
+        <span>BPM</span>
+      </div>
+      
       <div id="simulatorContainer" class="simulator-container hidden">
         <div class="simulator-header">
           <span class="simulator-title">📈 COURBE DE PROGRESSION</span>
@@ -1822,30 +1841,6 @@ function applyTheme(themeName) {
   savePrefs();
 }
 
-
-function applyOpacity(value) {
-  currentOpacity = clamp(Number(value), 0, 100);
-  const opacity = currentOpacity / 100;
-  
-  // Mettre à jour le style dynamique si présent
-  const style = document.getElementById('dynamic-bg-style');
-  if (style) {
-    const imageUrl = currentImage ? `url(${currentImage})` : 'none';
-    style.textContent = `
-      body::before {
-        background-image: ${imageUrl} !important;
-        opacity: ${opacity} !important;
-      }
-    `;
-  }
-  
-  // Mettre à jour l'affichage
-  opacityValue.textContent = Math.round(currentOpacity) + '%';
-  opacitySlider.value = currentOpacity;
-  
-  savePrefs();
-}
-
 function applyImage(imageDataUrl) {
   if (imageDataUrl) {
     currentImage = imageDataUrl;
@@ -1907,6 +1902,29 @@ function applyImage(imageDataUrl) {
   savePrefs();
 }
 
+function applyOpacity(value) {
+  currentOpacity = clamp(Number(value), 0, 100);
+  const opacity = currentOpacity / 100;
+  
+  // Mettre à jour le style dynamique si présent
+  const style = document.getElementById('dynamic-bg-style');
+  if (style) {
+    const imageUrl = currentImage ? `url(${currentImage})` : 'none';
+    style.textContent = `
+      body::before {
+        background-image: ${imageUrl} !important;
+        opacity: ${opacity} !important;
+      }
+    `;
+  }
+  
+  // Mettre à jour l'affichage
+  opacityValue.textContent = Math.round(currentOpacity) + '%';
+  opacitySlider.value = currentOpacity;
+  
+  savePrefs();
+}
+
 // ===== SAUVEGARDE / CHARGEMENT =====
 function savePrefs() {
   try {
@@ -1925,11 +1943,9 @@ function loadPrefs() {
     if (!data) return;
     const prefs = JSON.parse(data);
     
-    
     if (prefs.theme && THEMES[prefs.theme]) {
       applyTheme(prefs.theme);
     }
-    
     
     if (prefs.image) {
       setTimeout(() => {
@@ -2017,7 +2033,8 @@ const beatsPerBarSelect = $("beatsPerBar"), beatIndicators = $("beatIndicators")
 const startStopButton = $("startStop"), startText = $("startText"), status = $("status");
 const soundSelect = $("sound"), rampEnabled = $("rampEnabled"), rampSettings = $("rampSettings");
 const rampMode = $("rampMode"), rampStart = $("rampStart"), rampEnd = $("rampEnd");
-const rampBars = $("rampBars"), measureNumber = $("measureNumber");
+const rampBars = $("rampBars"), rampStep = $("rampStep");
+const measureNumber = $("measureNumber");
 const beatCounter = $("beatCounter"), pulse = $("pulse");
 const simulatorContainer = $("simulatorContainer");
 const simulatorCanvas = $("simulatorChart");
@@ -2088,6 +2105,18 @@ function updateRampModeUI() {
   const isAsymptotic = rampMode.value === "asymptotic";
   if (simulatorContainer) simulatorContainer.classList.toggle("hidden", !isAsymptotic);
   if (asymptoticHint) asymptoticHint.style.display = isAsymptotic ? "block" : "none";
+  
+  // Gérer le champ PAS
+  const stepField = document.getElementById('stepField');
+  if (stepField) {
+    if (isAsymptotic) {
+      stepField.classList.add('disabled');
+      rampStep.disabled = true;
+    } else {
+      stepField.classList.remove('disabled');
+      rampStep.disabled = false;
+    }
+  }
 }
 
 rampEnabled.addEventListener("change", () => {
@@ -2651,6 +2680,7 @@ function rampConfig() {
     mode: rampMode.value,
     start: clamp(Number(rampStart.value) || 80, 40, 220),
     end: clamp(Number(rampEnd.value) || 140, 40, 220),
+    step: clamp(Number(rampStep.value) || 5, 1, 50),
     bars: clamp(Number(rampBars.value) || 4, 1, 999)
   };
 }
@@ -2660,9 +2690,26 @@ function tempoForMeasure(measure) {
   if (!c.enabled) return getBpm();
   const cycleIndex = Math.floor((measure - 1) / c.bars);
   const phase = cycleIndex;
-  if (c.mode === "up") return clamp(c.start + Math.min(phase, Math.ceil((c.end - c.start) / 5)) * 5, 30, 300);
-  if (c.mode === "down") return clamp(c.start - Math.min(phase, Math.ceil((c.start - c.end) / 5)) * 5, 30, 300);
-  if (c.mode === "burst") return phase % 2 === 0 ? c.start : c.end;
+  
+  if (c.mode === "up") {
+    return clamp(c.start + phase * c.step, 30, 300);
+  }
+  if (c.mode === "down") {
+    return clamp(c.start - phase * c.step, 30, 300);
+  }
+  if (c.mode === "pyramid") {
+    const cycleLength = Math.ceil((c.end - c.start) / c.step) * 2;
+    const pos = phase % cycleLength;
+    const halfCycle = cycleLength / 2;
+    if (pos <= halfCycle) {
+      return clamp(c.start + pos * c.step, 30, 300);
+    } else {
+      return clamp(c.end - (pos - halfCycle) * c.step, 30, 300);
+    }
+  }
+  if (c.mode === "burst") {
+    return phase % 2 === 0 ? c.start : c.end;
+  }
   if (c.mode === "asymptotic") {
     const totalSteps = (measure - 1) / c.bars;
     const x = clamp((totalSteps / 50) * 100, 0, 100);
@@ -2790,6 +2837,11 @@ document.addEventListener("keydown", e => {
 // ===== INIT =====
 rampStart.addEventListener("input", () => { if (rampMode.value === "asymptotic") updateSimulatorFromInputs(); });
 rampEnd.addEventListener("input", () => { if (rampMode.value === "asymptotic") updateSimulatorFromInputs(); });
+rampStep.addEventListener("change", () => {
+  if (rampMode.value !== "asymptotic") {
+    // Mettre à jour l'affichage si besoin
+  }
+});
 
 function updateSimulatorFromInputs() {
   if (rampMode.value !== "asymptotic") return;
