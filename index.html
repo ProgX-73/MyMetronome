@@ -506,7 +506,7 @@ h1 span{color:var(--accent)}
   border:0;
   outline:0;
   color:var(--text);
-  font-size:4rem;
+  font-size:5rem;
   line-height:1;
   font-weight:800;
   text-align:center;
@@ -1085,7 +1085,7 @@ body.has-bg-image .shortcut-circle {
   }
   .bpm-display input {
     width: 120px !important;
-    font-size: 3rem !important;
+    font-size: 4rem !important;
   }
   .round-button {
     width: 30px !important;
@@ -1302,7 +1302,21 @@ body.has-bg-image .shortcut-circle {
     padding: 4px;
   }
 }
-
+/* ===== TRÈS PETIT ÉCRAN (iPhone SE, etc.) ===== */
+@media (max-width: 380px) {
+  .bpm-display input {
+    width: 100px !important;
+    font-size: 3.2rem !important;
+  }
+  .tempo-row {
+    gap: 6px !important;
+  }
+  .round-button {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 0.8rem !important;
+  }
+}
 /* ===== IPAD / TABLETTE ===== */
 @media (min-width: 481px) and (max-width: 1024px) {
   .app {
